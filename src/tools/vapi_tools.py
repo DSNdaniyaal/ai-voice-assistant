@@ -3,13 +3,12 @@ from datetime import datetime
 from typing import Any
 
 from src.tools.google_calendar import (
+    cancel_appointment,
     check_availability,
     create_appointment,
     find_appointment,
     reschedule_appointment,
-    cancel_appointment,
 )
-
 from src.tools.google_sheets import (
     record_customer_interaction,
 )
@@ -40,7 +39,7 @@ def _normalise_arguments(
         arguments = json.loads(arguments)
 
     if not isinstance(arguments, dict):
-        raise ValueError(
+        raise TypeError(
             "Tool arguments must be a JSON object"
         )
 
@@ -67,10 +66,6 @@ def execute_vapi_tool(
         ),
     )
     print("=" * 70)
-
-    # =========================================================
-    # CHECK AVAILABILITY
-    # =========================================================
 
     if tool_name == "check_availability":
 
@@ -102,10 +97,6 @@ def execute_vapi_tool(
                 [],
             ),
         }
-
-    # =========================================================
-    # CREATE APPOINTMENT
-    # =========================================================
 
     elif tool_name == "create_appointment":
 
@@ -201,10 +192,6 @@ def execute_vapi_tool(
             ).get("dateTime"),
         }
 
-    # =========================================================
-    # FIND APPOINTMENT
-    # =========================================================
-
     elif tool_name == "find_appointment":
 
         appointment_id = arguments.get(
@@ -243,11 +230,7 @@ def execute_vapi_tool(
                 "",
             ),
         }
-
-    # =========================================================
-    # RESCHEDULE
-    # =========================================================
-
+    
     elif tool_name == "reschedule_appointment":
 
         required_fields = [
@@ -313,11 +296,7 @@ def execute_vapi_tool(
                 {},
             ).get("dateTime"),
         }
-
-    # =========================================================
-    # CANCEL
-    # =========================================================
-
+    
     elif tool_name == "cancel_appointment":
 
         appointment_id = arguments.get(
@@ -335,10 +314,6 @@ def execute_vapi_tool(
         )
 
         return result
-
-    # =========================================================
-    # GOOGLE SHEETS
-    # =========================================================
 
     elif tool_name == "record_customer_interaction":
 

@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src.agent.reception_agent import execute_tool, process_message
+from src.agent.reception_agent import process_message
 from src.agent.state import ConversationState
 from src.tools.vapi_tools import execute_vapi_tool
 
