@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f1e9" />
+    <title>Maple Street Dog Grooming</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true">MS</div>
+        <div>
+          <p class="eyebrow">Maple Street</p>
+          <h1>Dog Grooming</h1>
+        </div>
+        <span class="status"><span class="status-dot"></span>Online</span>
+      </header>
+
+      <section class="chat-panel" aria-label="Chat with the Maple Street receptionist">
+        <div class="intro">
+          <p class="eyebrow">Your grooming concierge</p>
+          <h2>How can we help<br />your best friend?</h2>
+          <p class="intro-copy">Ask about services, hours, pricing, or finding a time to visit.</p>
+        </div>
+
+        <div id="messages" class="messages" aria-live="polite">
+          <div class="message agent-message">
+            <div class="avatar" aria-hidden="true">M</div>
+            <div class="bubble">Hi there. I'm the Maple Street receptionist. What can I help you with today?</div>
+          </div>
+        </div>
+
+        <form id="chat-form" class="composer">
+          <label class="sr-only" for="message-input">Message the receptionist</label>
+          <textarea id="message-input" rows="1" maxlength="2000" placeholder="Ask about an appointment..." required></textarea>
+          <button id="send-button" type="submit" aria-label="Send message" title="Send message">
+            <span aria-hidden="true">↑</span>
+          </button>
+        </form>
+        <p id="error-message" class="error-message" role="alert"></p>
+      </section>
+
+      <footer>Appointments, questions, and happy tails.</footer>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

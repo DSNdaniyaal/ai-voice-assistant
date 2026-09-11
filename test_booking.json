@@ -1,0 +1,19 @@
+{
+  "message": {
+    "type": "tool-calls",
+    "toolCallList": [
+      {
+        "id": "test-booking-123",
+        "name": "create_appointment",
+        "arguments": {
+          "phone": "456-231-25",
+          "dog_name": "Tommy",
+          "start_time": "2026-09-12T15:00:00+05:30",
+          "service_name": "full grooming",
+          "customer_name": "Daniel",
+          "duration_minutes": 60
+        }
+      }
+    ]
+  }
+}
