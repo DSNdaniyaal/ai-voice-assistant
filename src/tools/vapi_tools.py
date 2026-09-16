@@ -175,13 +175,6 @@ def execute_vapi_tool(
 
         return {
             "booked": True,
-            "appointment_id": appointment.get(
-                "id"
-            ),
-            "event_link": appointment.get(
-                "htmlLink",
-                "",
-            ),
             "start_time": appointment.get(
                 "start",
                 {},

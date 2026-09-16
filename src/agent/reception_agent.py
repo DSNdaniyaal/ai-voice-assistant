@@ -233,7 +233,15 @@ def execute_tool(name: str, arguments: dict):
             summary=f"Booked {arguments['service_name']} appointment.",
             calendar_event_link=appointment.get("htmlLink", ""),
         )
-        return {"appointment": appointment, "interaction": interaction}
+        return {
+            "booked": True,
+            "appointment": {
+                "summary": appointment.get("summary", ""),
+                "start": appointment.get("start", {}),
+                "end": appointment.get("end", {}),
+            },
+            "interaction_recorded": bool(interaction),
+        }
 
     elif name == "find_appointment":
         return find_appointment(appointment_id=arguments["appointment_id"])
@@ -360,6 +368,7 @@ def process_message(
         {"role": "system", "content": state.system_instruction},
         *state.contents,
     ]
+    completed_tool_calls = {}
 
     while True:
         response = _generate_response(messages)
@@ -373,19 +382,42 @@ def process_message(
 
         for tool_call in function_calls:
             function = tool_call.get("function", {})
+            tool_name = function.get("name", "")
+            arguments = function.get("arguments", {})
+            tool_key = json.dumps(
+                {
+                    "name": tool_name,
+                    "arguments": arguments,
+                },
+                sort_keys=True,
+                default=str,
+            )
+
+            if tool_key in completed_tool_calls:
+                tool_result = completed_tool_calls[tool_key]
+                tool_message = {
+                    "role": "tool",
+                    "content": json.dumps(tool_result),
+                }
+                state.contents.append(tool_message)
+                messages.append(tool_message)
+                continue
+
             try:
                 result = execute_tool(
-                    function.get("name", ""),
-                    function.get("arguments", {}),
+                    tool_name,
+                    arguments,
                 )
                 tool_result = {"success": True, "result": result}
 
             except Exception as e:
-                if function.get("name") == "create_appointment":
+                if tool_name == "create_appointment":
                     raise RuntimeError(
                         f"Appointment was not created in Google Calendar: {e}"
                     ) from e
                 tool_result = {"success": False, "error": str(e)}
+
+            completed_tool_calls[tool_key] = tool_result
 
             tool_message = {
                 "role": "tool",
