@@ -1,14 +1,17 @@
 import os
 from datetime import datetime, timedelta, timezone
+from threading import Lock
 
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 
+from src.config import BUSINESS_INFO
 from src.services.google_service import get_google_credentials
 
 load_dotenv()
 
 CALENDAR_ID = os.environ.get("GOOGLE_CALENDAR_ID")
+_booking_lock = Lock()
 
 
 def _require_future_time(start_time: datetime) -> datetime:
@@ -26,6 +29,46 @@ def _require_future_time(start_time: datetime) -> datetime:
         )
 
     return start_time
+
+
+def _require_business_hours(
+    start_time: datetime,
+    duration_minutes: int,
+) -> datetime:
+    """Reject appointments outside the configured business hours."""
+
+    end_time = start_time + timedelta(minutes=duration_minutes)
+    day_name = start_time.strftime("%A").lower()
+    hours = BUSINESS_INFO["hours"].get(day_name, "Closed")
+
+    if hours == "Closed":
+        raise ValueError(
+            f"Appointments are not available on {start_time.strftime('%A')}."
+        )
+
+    opening_text, closing_text = hours.split(" - ")
+    opening_time = datetime.strptime(opening_text, "%I:%M %p").time()
+    closing_time = datetime.strptime(closing_text, "%I:%M %p").time()
+    opening = start_time.replace(
+        hour=opening_time.hour,
+        minute=opening_time.minute,
+        second=0,
+        microsecond=0,
+    )
+    closing = start_time.replace(
+        hour=closing_time.hour,
+        minute=closing_time.minute,
+        second=0,
+        microsecond=0,
+    )
+
+    if start_time < opening or end_time > closing:
+        raise ValueError(
+            f"Appointments on {start_time.strftime('%A')} must be between "
+            f"{opening_text} and {closing_text}."
+        )
+
+    return end_time
 
 
 def get_calendar_service():
@@ -123,28 +166,39 @@ def create_appointment(
             "GOOGLE_CALENDAR_ID is not configured in .env"
         )
 
-    start_time = _require_future_time(start_time)
-    service = get_calendar_service()
     duration_minutes = int(duration_minutes)
+    if duration_minutes <= 0:
+        raise ValueError("duration_minutes must be greater than 0")
 
-    end_time = start_time + timedelta(minutes=duration_minutes)
-    event = {
-        "summary": f"{service_name} - {dog_name}",
-        "description": (
-            f"Customer: {customer_name}\n"
-            f"Phone: {phone}\n"
-            f"Dog: {dog_name}\n"
-            f"Service: {service_name}"
-        ),
-        "start": {"dateTime": start_time.isoformat()},
-        "end": {"dateTime": end_time.isoformat()},
-    }
+    start_time = _require_future_time(start_time)
+    _require_business_hours(start_time, duration_minutes)
 
-    return (
-        service.events()
-        .insert(calendarId=CALENDAR_ID, body=event)
-        .execute()
-    )
+    # Keep the availability check and insert together within this process.
+    with _booking_lock:
+        availability = check_availability(start_time, duration_minutes)
+        if not availability["available"]:
+            raise ValueError("The requested appointment time is already booked.")
+
+        service = get_calendar_service()
+
+        end_time = start_time + timedelta(minutes=duration_minutes)
+        event = {
+            "summary": f"{service_name} - {dog_name}",
+            "description": (
+                f"Customer: {customer_name}\n"
+                f"Phone: {phone}\n"
+                f"Dog: {dog_name}\n"
+                f"Service: {service_name}"
+            ),
+            "start": {"dateTime": start_time.isoformat()},
+            "end": {"dateTime": end_time.isoformat()},
+        }
+
+        return (
+            service.events()
+            .insert(calendarId=CALENDAR_ID, body=event)
+            .execute()
+        )
 
 def find_appointment(appointment_id: str):
     service = get_calendar_service()
@@ -160,19 +214,35 @@ def reschedule_appointment(
     start_time: datetime,
     duration_minutes: int,
 ):
-    start_time = _require_future_time(start_time)
-    service = get_calendar_service()
-    end_time = start_time + timedelta(minutes=duration_minutes)
-    event = {
-        "start": {"dateTime": start_time.isoformat()},
-        "end": {"dateTime": end_time.isoformat()},
-    }
+    duration_minutes = int(duration_minutes)
+    if duration_minutes <= 0:
+        raise ValueError("duration_minutes must be greater than 0")
 
-    return (
-        service.events()
-        .patch(calendarId=CALENDAR_ID, eventId=appointment_id, body=event)
-        .execute()
-    )
+    start_time = _require_future_time(start_time)
+    _require_business_hours(start_time, duration_minutes)
+
+    with _booking_lock:
+        availability = check_availability(start_time, duration_minutes)
+        conflicts = [
+            conflict
+            for conflict in availability["conflicts"]
+            if conflict.get("id") != appointment_id
+        ]
+        if conflicts:
+            raise ValueError("The requested appointment time is already booked.")
+
+        service = get_calendar_service()
+        end_time = start_time + timedelta(minutes=duration_minutes)
+        event = {
+            "start": {"dateTime": start_time.isoformat()},
+            "end": {"dateTime": end_time.isoformat()},
+        }
+
+        return (
+            service.events()
+            .patch(calendarId=CALENDAR_ID, eventId=appointment_id, body=event)
+            .execute()
+        )
 
 
 def cancel_appointment(appointment_id: str):
