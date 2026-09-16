@@ -69,7 +69,6 @@ TOOLS = [
                             "type": "STRING",
                             "description": "ISO 8601 datetime with timezone.",
                         },
-                        "duration_minutes": {"type": "INTEGER"},
                     },
                     "required": [
                         "customer_name",
@@ -77,7 +76,6 @@ TOOLS = [
                         "dog_name",
                         "service_name",
                         "start_time",
-                        "duration_minutes",
                     ],
                 },
             ),
@@ -221,7 +219,6 @@ def execute_tool(name: str, arguments: dict):
             dog_name=arguments["dog_name"],
             service_name=arguments["service_name"],
             start_time=start_time,
-            duration_minutes=arguments["duration_minutes"],
         )
 
         interaction = record_customer_interaction(

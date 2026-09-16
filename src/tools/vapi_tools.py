@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from typing import Any
 
+from src.config import get_service_duration
 from src.tools.google_calendar import (
     cancel_appointment,
     check_availability,
@@ -106,7 +107,6 @@ def execute_vapi_tool(
             "dog_name",
             "service_name",
             "start_time",
-            "duration_minutes",
         ]
 
         for field in required_fields:
@@ -121,14 +121,7 @@ def execute_vapi_tool(
             arguments["start_time"]
         )
 
-        duration_minutes = int(
-            arguments["duration_minutes"]
-        )
-
-        if duration_minutes <= 0:
-            raise ValueError(
-                "duration_minutes must be greater than 0"
-            )
+        duration_minutes = get_service_duration(arguments["service_name"])
 
         # ALWAYS check before booking
         availability = check_availability(
@@ -153,7 +146,6 @@ def execute_vapi_tool(
             dog_name=arguments["dog_name"],
             service_name=arguments["service_name"],
             start_time=start_time,
-            duration_minutes=duration_minutes,
         )
 
         # Save booking to Sheets

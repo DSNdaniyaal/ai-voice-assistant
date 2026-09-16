@@ -36,3 +36,21 @@ BUSINESS_INFO = {
         "special_cases": "Large or difficult-to-handle breeds may require human review."
     }
 }
+
+
+def get_service_duration(service_name: str) -> int:
+    """Return the configured duration for a service name or alias."""
+
+    normalized_name = service_name.strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "full_grooming": "full_groom",
+        "bath_and_trim": "bath_and_trim",
+        "bath_trim": "bath_and_trim",
+    }
+    service_key = aliases.get(normalized_name, normalized_name)
+    service = BUSINESS_INFO["services"].get(service_key)
+
+    if not service:
+        raise ValueError(f"Unknown grooming service: {service_name}")
+
+    return service["duration_minutes"]

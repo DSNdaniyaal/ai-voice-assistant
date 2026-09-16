@@ -1,11 +1,11 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from threading import Lock
 
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 
-from src.config import BUSINESS_INFO
+from src.config import BUSINESS_INFO, get_service_duration
 from src.services.google_service import get_google_credentials
 
 load_dotenv()
@@ -47,8 +47,17 @@ def _require_business_hours(
         )
 
     opening_text, closing_text = hours.split(" - ")
-    opening_time = datetime.strptime(opening_text, "%I:%M %p").time()
-    closing_time = datetime.strptime(closing_text, "%I:%M %p").time()
+
+    def parse_business_time(value: str) -> time:
+        clock, period = value.rsplit(" ", 1)
+        hour_text, minute_text = clock.split(":")
+        hour = int(hour_text) % 12
+        if period == "PM":
+            hour += 12
+        return time(hour=hour, minute=int(minute_text))
+
+    opening_time = parse_business_time(opening_text)
+    closing_time = parse_business_time(closing_text)
     opening = start_time.replace(
         hour=opening_time.hour,
         minute=opening_time.minute,
@@ -159,16 +168,13 @@ def create_appointment(
     dog_name: str,
     service_name: str,
     start_time: datetime,
-    duration_minutes: int,
 ):
     if not CALENDAR_ID:
         raise ValueError(
             "GOOGLE_CALENDAR_ID is not configured in .env"
         )
 
-    duration_minutes = int(duration_minutes)
-    if duration_minutes <= 0:
-        raise ValueError("duration_minutes must be greater than 0")
+    duration_minutes = get_service_duration(service_name)
 
     start_time = _require_future_time(start_time)
     _require_business_hours(start_time, duration_minutes)
